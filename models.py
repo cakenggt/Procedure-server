@@ -9,7 +9,7 @@ class Checklist(models.Model):
     when this happens.
     """
     title = models.CharField(max_length=200)
-    parent = models.ForeignKey('Checklist', null=True)
+    parent = models.ForeignKey('Checklist', null=True, blank=True)
 
     def __unicode__(self):
         if self.parent is None:
@@ -24,6 +24,7 @@ class ChecklistItem(models.Model):
     is a header.
     """
     text = models.CharField(max_length=200)
+    order = models.IntegerField(default=0)
     checklist = models.ForeignKey(Checklist)
 
     def __unicode__(self):
