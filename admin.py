@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Checklist, ChecklistItem, ChecklistEntry
+from .models import Checklist, ChecklistItem
 
 class ChecklistItemInline(admin.TabularInline):
     model = ChecklistItem
@@ -12,4 +12,3 @@ class ChecklistAdmin(admin.ModelAdmin):
 
 # Register your models here.
 admin.site.register(Checklist, ChecklistAdmin)
-admin.site.register(ChecklistEntry)

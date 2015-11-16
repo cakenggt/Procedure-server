@@ -14,31 +14,25 @@ class Checklist(models.Model):
     owner = models.ForeignKey(User)
 
     def __unicode__(self):
-        if self.parent is None:
-            return self.title
-        else:
-            return "Child of checklist " + str(self.parent.pk) + ": " + self.parent.title
+        return self.title
 
 class ChecklistItem(models.Model):
     """
     Item in a checklist. Can be a header or a checklist
-    entry. If the checklistEntry one-to-one recursive field is empty, then it
-    is a header.
+    entry. Checkable is whether or not it is an entry.
+    Checked is whether or not the entry is checked. Headers
+    cannot be checked, so only display a checked item if
+    checked and checkable are true.
     """
     text = models.CharField(max_length=200)
     order = models.IntegerField(default=0)
     checklist = models.ForeignKey(Checklist)
+    checkable = models.BooleanField(default=False)
+    checked = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.text
 
-class ChecklistEntry(models.Model):
-    """
-    Checkable entry in a checklist. Is a subclass of ChecklistItem and
-    has a one-to-one relationship with a ChecklistItem.
-    """
-    item = models.OneToOneField(ChecklistItem, primary_key=True, related_name='entry')
-    checked = models.BooleanField(default=False)
-
-    def __unicode__(self):
-        return self.item.text + "; Checked: " + str(self.checked)
+    def clean(self):
+        if not self.checkable:
+            self.checked = False
