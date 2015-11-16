@@ -19,7 +19,7 @@ class GetAllChecklistsView(APIView):
 
     def get(self, request, format=None):
         checklists = []
-        for checklist in Checklist.objects.filter(owner=request.user.id):
+        for checklist in Checklist.objects.filter(owner=request.user.id).order_by('order'):
             checklistJson = checklist_to_json(checklist)
             checklists.append(checklistJson)
         return JsonResponse({'checklists':checklists})
@@ -28,7 +28,7 @@ class CreateChecklistView(APIView):
     """
     Create a new checklist.
     Request body should be in the format:
-    {"title":"test checklist","parent":null,"items":[{"text":"test1","checkable":false,"checked":false}]}
+    {"title":"test checklist","order":0,"parent":null,"items":[{"text":"test1","checkable":false,"checked":false}]}
     """
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
@@ -41,10 +41,12 @@ class CreateChecklistView(APIView):
             parent = int(data["parent"])
         else:
             parent = None
+        order = data.get("order", 0)
         checklist = Checklist.objects.create(
             title=title,
             owner=owner,
-            parent=parent
+            parent=parent,
+            order=order
         )
         for i, itemJ in enumerate(data.get('items', [])):
             text = itemJ.get('text', "")
@@ -63,7 +65,7 @@ class CreateChecklistView(APIView):
 def checklist_to_json(checklist):
     """
     Creates dict in format:
-    {"title":"test checklist","parent":null,"items":[{"text":"test1","checkable":false,"checked":false}]}
+    {"title":"test checklist","order":0,"parent":null,"items":[{"text":"test1","checkable":false,"checked":false}]}
     """
     checklistJson = {}
     checklistItems = []
@@ -72,6 +74,7 @@ def checklist_to_json(checklist):
     if checklist.parent is not None:
         checklist = checklist.parent
     checklistJson['title'] = checklist.title
+    checklistJson['order'] = checklist.order
     for checklistItem in checklist.checklistitem_set.all().order_by('order'):
         item = {}
         item['pk'] = checklistItem.pk

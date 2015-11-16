@@ -10,6 +10,7 @@ class Checklist(models.Model):
     when this happens.
     """
     title = models.CharField(max_length=200)
+    order = models.IntegerField(default=0)
     parent = models.ForeignKey('Checklist', null=True, blank=True)
     owner = models.ForeignKey(User)
 
