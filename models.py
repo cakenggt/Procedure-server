@@ -9,7 +9,13 @@ class Checklist(models.Model):
     when this happens.
     """
     title = models.CharField(max_length=200)
-    parent = models.ForeignKey('Checklist')
+    parent = models.ForeignKey('Checklist', null=True)
+
+    def __unicode__(self):
+        if self.parent is None:
+            return self.title
+        else:
+            return "Child of checklist " + str(self.parent.pk) + ": " + self.parent.title
 
 class ChecklistItem(models.Model):
     """
@@ -20,10 +26,16 @@ class ChecklistItem(models.Model):
     text = models.CharField(max_length=200)
     checklist = models.ForeignKey(Checklist)
 
+    def __unicode__(self):
+        return self.text
+
 class ChecklistEntry(models.Model):
     """
     Checkable entry in a checklist. Is a subclass of ChecklistItem and
     has a one-to-one relationship with a ChecklistItem.
     """
-    item = models.OneToOneField(ChecklistItem, primary_key=True)
+    item = models.OneToOneField(ChecklistItem, primary_key=True, related_name='entry')
     checked = models.BooleanField(default=False)
+
+    def __unicode__(self):
+        return self.item.text + "; Checked: " + str(self.checked)
