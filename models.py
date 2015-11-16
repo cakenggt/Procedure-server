@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 # Create your models here.
 class Checklist(models.Model):
@@ -10,6 +11,7 @@ class Checklist(models.Model):
     """
     title = models.CharField(max_length=200)
     parent = models.ForeignKey('Checklist', null=True, blank=True)
+    owner = models.ForeignKey(User)
 
     def __unicode__(self):
         if self.parent is None:
