@@ -12,3 +12,4 @@ class ChecklistAdmin(admin.ModelAdmin):
 
 # Register your models here.
 admin.site.register(Checklist, ChecklistAdmin)
+admin.site.register(ChecklistEntry)
