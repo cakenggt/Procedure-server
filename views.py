@@ -26,9 +26,9 @@ class GetAllChecklistsView(APIView):
 
 class CreateChecklistView(APIView):
     """
-    Create a new checklist.
+    Create a new checklist or updates a current one if the checklist has a pk.
     Request body should be in the format:
-    {"title":"test checklist","order":0,"parent":null,"items":[{"text":"test1","checkable":false,"checked":false}]}
+    {"pk":1,"title":"test checklist","order":0,"parent":null,"items":[{"text":"test1","checkable":false,"checked":false}]}
     """
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
@@ -36,31 +36,47 @@ class CreateChecklistView(APIView):
     def post(self, request, format=None):
         data = json.loads(request.body)
         title = data.get("title", "")
-        owner = request.user
-        if data["parent"]:
+        owner = request.user.id
+        if data.get("parent", None):
             parent = int(data["parent"])
         else:
             parent = None
         order = data.get("order", 0)
-        checklist = Checklist.objects.create(
-            title=title,
-            owner=owner,
-            parent=parent,
-            order=order
-        )
+        if data.get('pk', None) and int(data.get('pk', 0)) > 0:
+            pk = int(data["pk"])
+            checklist = Checklist.objects.get(pk=pk)
+            checklist.title = title
+            checklist.order = order
+            checklist.save()
+        else:
+            checklist = Checklist.objects.create(
+                title=title,
+                owner=owner,
+                parent=parent,
+                order=order
+            )
         for i, itemJ in enumerate(data.get('items', [])):
             text = itemJ.get('text', "")
             checkable = itemJ['checkable']
             checked = itemJ['checked']
-            ChecklistItem.objects.create(
-                text=text,
-                checkable=checkable,
-                checked=checked,
-                order=i,
-                checklist=checklist
-            )
+            if itemJ["pk"] and int(itemJ["pk"]) > 0:
+                pk = int(itemJ["pk"])
+                item = ChecklistItem.objects.get(pk=pk)
+                item.text = text
+                item.checkable = checkable
+                item.checked = checked
+                item.order = i
+                item.save()
+            else:
+                ChecklistItem.objects.create(
+                    text=text,
+                    checkable=checkable,
+                    checked=checked,
+                    order=i,
+                    checklist=checklist
+                )
         checklist.save()
-        return JsonResponse({'checklist':checklist_to_json(checklist), 'status':'SUCCESS', 'original': data})
+        return JsonResponse({'checklist':checklist_to_json(checklist), 'status':'SUCCESS'})
 
 def checklist_to_json(checklist):
     """
