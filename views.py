@@ -81,6 +81,7 @@ def checklist_to_json(checklist):
         item['text'] = checklistItem.text
         item['checkable'] = checklistItem.checkable
         item['checked'] = checklistItem.checked
+        item['order'] = checklistItem.order;
         checklistItems.append(item)
     checklistJson['items'] = checklistItems
     return checklistJson
