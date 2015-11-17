@@ -24,6 +24,25 @@ class GetAllChecklistsView(APIView):
             checklists.append(checklistJson)
         return JsonResponse({'checklists':checklists})
 
+class SaveChecklistOrderView(APIView):
+    """
+    save order and titles of checklists.
+    Data comes in like this:
+    {"checklists":[{"pk":1, "title":"winterizing"},{"pk":2, "title":"house"}]}
+    """
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, format=None):
+        data = json.loads(request.body)
+        checklists = data.get("checklists", [])
+        for i, checkJ in enumerate(checklists):
+            checklist = Checklist.objects.get(pk=int(checkJ.get("pk")))
+            checklist.title = checkJ.get("title", "")
+            checklist.order = i
+            checklist.save()
+        return JsonResponse({'status':'SUCCESS'})
+
 class CreateChecklistView(APIView):
     """
     Create a new checklist or updates a current one if the checklist has a pk.
