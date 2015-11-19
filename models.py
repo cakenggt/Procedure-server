@@ -13,6 +13,7 @@ class Checklist(models.Model):
     order = models.IntegerField(default=0)
     parent = models.ForeignKey('Checklist', null=True, blank=True)
     owner = models.ForeignKey(User)
+    last_modified = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
         return self.title

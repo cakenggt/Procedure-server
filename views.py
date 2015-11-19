@@ -19,7 +19,7 @@ class GetAllChecklistsView(APIView):
 
     def get(self, request, format=None):
         checklists = []
-        for checklist in Checklist.objects.filter(owner=request.user.id).order_by('order'):
+        for checklist in request.user.checklist_set.order_by('order'):
             checklistJson = checklist_to_json(checklist)
             checklists.append(checklistJson)
         return JsonResponse({'checklists':checklists})
@@ -110,6 +110,7 @@ def checklist_to_json(checklist):
         checklist = checklist.parent
     checklistJson['title'] = checklist.title
     checklistJson['order'] = checklist.order
+    checklistJson['last_modified'] = str(checklist.last_modified)
     for checklistItem in checklist.checklistitem_set.all().order_by('order'):
         item = {}
         item['pk'] = checklistItem.pk
