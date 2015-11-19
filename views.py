@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 import json
+from datetime import datetime
 
 from.models import Checklist, ChecklistItem
 
@@ -26,7 +27,7 @@ class GetAllChecklistsView(APIView):
 
 class SaveChecklistOrderView(APIView):
     """
-    save order and titles of checklists.
+    save order and titles of checklists. Also deletes any missing checklists.
     Data comes in like this:
     {"checklists":[{"pk":1, "title":"winterizing"},{"pk":2, "title":"house"}]}
     """
@@ -36,11 +37,17 @@ class SaveChecklistOrderView(APIView):
     def post(self, request, format=None):
         data = json.loads(request.body)
         checklists = data.get("checklists", [])
+        server_checklist_pks = set()
+        for checklist in request.user.checklist_set.all():
+            server_checklist_pks.add(checklist.pk)
         for i, checkJ in enumerate(checklists):
-            checklist = Checklist.objects.get(pk=int(checkJ.get("pk")))
+            checklist = Checklist.objects.get(pk=long(checkJ.get("pk")))
             checklist.title = checkJ.get("title", "")
             checklist.order = i
             checklist.save()
+            server_checklist_pks.remove(checklist.pk)
+        #delete any checklists that did not come in in the reorder call
+        Checklist.objects.filter(pk__in=server_checklist_pks).delete()
         return JsonResponse({'status':'SUCCESS'})
 
 class CreateChecklistView(APIView):
@@ -55,14 +62,14 @@ class CreateChecklistView(APIView):
     def post(self, request, format=None):
         data = json.loads(request.body)
         title = data.get("title", "")
-        owner = request.user.id
+        owner = request.user
         if data.get("parent", None):
-            parent = int(data["parent"])
+            parent = long(data["parent"])
         else:
             parent = None
         order = data.get("order", 0)
-        if data.get('pk', None) and int(data.get('pk', 0)) > 0:
-            pk = int(data["pk"])
+        if data.get('pk', None) and not data.get('unSynced', True):
+            pk = long(data["pk"])
             checklist = Checklist.objects.get(pk=pk)
             checklist.title = title
             checklist.order = order
@@ -78,8 +85,8 @@ class CreateChecklistView(APIView):
             text = itemJ.get('text', "")
             checkable = itemJ['checkable']
             checked = itemJ['checked']
-            if itemJ["pk"] and int(itemJ["pk"]) > 0:
-                pk = int(itemJ["pk"])
+            if itemJ.get('pk', None):
+                pk = long(itemJ["pk"])
                 item = ChecklistItem.objects.get(pk=pk)
                 item.text = text
                 item.checkable = checkable
@@ -110,7 +117,7 @@ def checklist_to_json(checklist):
         checklist = checklist.parent
     checklistJson['title'] = checklist.title
     checklistJson['order'] = checklist.order
-    checklistJson['last_modified'] = str(checklist.last_modified)
+    checklistJson['last_modified'] = long((checklist.last_modified.replace(tzinfo=None) - datetime.utcfromtimestamp(0)).total_seconds()*1000)
     for checklistItem in checklist.checklistitem_set.all().order_by('order'):
         item = {}
         item['pk'] = checklistItem.pk
