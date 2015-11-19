@@ -52,7 +52,7 @@ class SaveChecklistOrderView(APIView):
 
 class CreateChecklistView(APIView):
     """
-    Create a new checklist or updates a current one if the checklist has a pk.
+    Create a new checklist or updates a current one if the checklist is synced.
     Request body should be in the format:
     {"pk":1,"title":"test checklist","order":0,"parent":null,"items":[{"text":"test1","checkable":false,"checked":false}]}
     """
