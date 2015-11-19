@@ -64,16 +64,16 @@ class CreateChecklistView(APIView):
         title = data.get("title", "")
         owner = request.user
         if data.get("parent", None):
-            parent = long(data["parent"])
+            parent = Checklist.objects.get(pk=data["parent"])
         else:
             parent = None
         order = data.get("order", 0)
         if data.get('pk', None) and not data.get('unSynced', True):
-            pk = long(data["pk"])
+            pk = data.get('pk', None)
+            print "checklist " + str(pk) + ": " + title
             checklist = Checklist.objects.get(pk=pk)
             checklist.title = title
             checklist.order = order
-            checklist.save()
         else:
             checklist = Checklist.objects.create(
                 title=title,
@@ -83,6 +83,7 @@ class CreateChecklistView(APIView):
             )
         for i, itemJ in enumerate(data.get('items', [])):
             text = itemJ.get('text', "")
+            print text
             checkable = itemJ['checkable']
             checked = itemJ['checked']
             if itemJ.get('pk', None):
@@ -112,19 +113,51 @@ def checklist_to_json(checklist):
     checklistJson = {}
     checklistItems = []
     checklistJson['pk'] = checklist.pk
-    checklistJson['parent'] = checklist.parent
-    if checklist.parent is not None:
-        checklist = checklist.parent
-    checklistJson['title'] = checklist.title
+    checklistJson['parent'] = None
     checklistJson['order'] = checklist.order
     checklistJson['last_modified'] = long((checklist.last_modified.replace(tzinfo=None) - datetime.utcfromtimestamp(0)).total_seconds()*1000)
+    checklistJson['title'] = checklist.title
+    if checklist.parent is not None:
+        checklistJson['parent'] = checklist.parent.pk
+        parent = checklist.parent
+        parent_ci_size = len(parent.checklistitem_set.all())
+        child_ci_size = len(checklist.checklistitem_set.all())
+        size_difference = parent_ci_size - child_ci_size
+        print parent_ci_size
+        print child_ci_size
+        if size_difference > 0:
+            print 'bigger'
+            # add some items
+            for i in xrange(size_difference):
+                ChecklistItem.objects.create(
+                    text='',
+                    checkable=False,
+                    checked=False,
+                    order=i+parent_ci_size,
+                    checklist=checklist
+                )
+        elif size_difference < 0:
+            print 'smaller'
+            #remove some items
+            for i in xrange(abs(size_difference)):
+                checklist.checklistitem_set.all().order_by('order')[parent_ci_size].delete()
+        #replace all of the text and checkable attributes when ordering by order, and save each item
+        #reorder items so that they go up consecutively
+        for i in xrange(parent_ci_size):
+            parent_item = parent.checklistitem_set.all().order_by('order')[i]
+            child_item = checklist.checklistitem_set.all().order_by('order')[i]
+            child_item.order = i
+            child_item.text = parent_item.text
+            child_item.checkable = parent_item.checkable
+            child_item.save()
     for checklistItem in checklist.checklistitem_set.all().order_by('order'):
         item = {}
         item['pk'] = checklistItem.pk
         item['text'] = checklistItem.text
         item['checkable'] = checklistItem.checkable
         item['checked'] = checklistItem.checked
-        item['order'] = checklistItem.order;
+        item['order'] = checklistItem.order
         checklistItems.append(item)
     checklistJson['items'] = checklistItems
+    checklist.save()
     return checklistJson
