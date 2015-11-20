@@ -109,6 +109,8 @@ def checklist_to_json(checklist):
     """
     Creates dict in format:
     {"title":"test checklist","order":0,"parent":null,"items":[{"text":"test1","checkable":false,"checked":false}]}
+
+    Also updates child checklists with their parent's items if they differ.
     """
     checklistJson = {}
     checklistItems = []
@@ -123,10 +125,7 @@ def checklist_to_json(checklist):
         parent_ci_size = len(parent.checklistitem_set.all())
         child_ci_size = len(checklist.checklistitem_set.all())
         size_difference = parent_ci_size - child_ci_size
-        print parent_ci_size
-        print child_ci_size
         if size_difference > 0:
-            print 'bigger'
             # add some items
             for i in xrange(size_difference):
                 ChecklistItem.objects.create(
@@ -137,7 +136,6 @@ def checklist_to_json(checklist):
                     checklist=checklist
                 )
         elif size_difference < 0:
-            print 'smaller'
             #remove some items
             for i in xrange(abs(size_difference)):
                 checklist.checklistitem_set.all().order_by('order')[parent_ci_size].delete()
