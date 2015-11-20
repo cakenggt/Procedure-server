@@ -41,7 +41,7 @@ class SaveChecklistOrderView(APIView):
         for checklist in request.user.checklist_set.all():
             server_checklist_pks.add(checklist.pk)
         for i, checkJ in enumerate(checklists):
-            checklist = Checklist.objects.get(pk=long(checkJ.get("pk")))
+            checklist = request.user.checklist_set.get(pk=long(checkJ.get("pk")))
             checklist.title = checkJ.get("title", "")
             checklist.order = i
             checklist.save()
@@ -70,8 +70,7 @@ class CreateChecklistView(APIView):
         order = data.get("order", 0)
         if data.get('pk', None) and not data.get('unSynced', True):
             pk = data.get('pk', None)
-            print "checklist " + str(pk) + ": " + title
-            checklist = Checklist.objects.get(pk=pk)
+            checklist = owner.checklist_set.get(pk=pk)
             checklist.title = title
             checklist.order = order
         else:
@@ -83,12 +82,13 @@ class CreateChecklistView(APIView):
             )
         for i, itemJ in enumerate(data.get('items', [])):
             text = itemJ.get('text', "")
-            print text
             checkable = itemJ['checkable']
             checked = itemJ['checked']
             if itemJ.get('pk', None):
                 pk = long(itemJ["pk"])
                 item = ChecklistItem.objects.get(pk=pk)
+                if item.checklist.owner != owner:
+                    return JsonResponse({'status':'FAILURE'})
                 item.text = text
                 item.checkable = checkable
                 item.checked = checked
