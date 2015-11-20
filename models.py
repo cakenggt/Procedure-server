@@ -11,7 +11,7 @@ class Checklist(models.Model):
     """
     title = models.CharField(max_length=200)
     order = models.IntegerField(default=0)
-    parent = models.ForeignKey('Checklist', null=True, blank=True)
+    parent = models.ForeignKey('Checklist', null=True, blank=True, on_delete=models.SET_NULL)
     owner = models.ForeignKey(User)
     last_modified = models.DateTimeField(auto_now=True)
 
