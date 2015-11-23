@@ -1,0 +1,15 @@
+<html>
+<head>
+  {% load staticfiles %}
+  <link rel="stylesheet" type="text/css" href="{% static 'procedure/style.css' %}" />
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+  <script type="text/javascript">
+    {% block js %} {% endblock %}
+  </script>
+</head>
+<body>
+    <a href={% url 'procedure:logout' %}>logout</a>
+    {% csrf_token %}
+    {% block content %} {% endblock %}
+</body>
+</html>

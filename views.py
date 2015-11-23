@@ -1,9 +1,11 @@
-from django.shortcuts import render
-from django.http import JsonResponse
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import JsonResponse, HttpResponseForbidden
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from rest_framework.authentication import TokenAuthentication
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from django.core import serializers
 
 import json
 from datetime import datetime
@@ -35,7 +37,7 @@ class SaveChecklistOrderView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, format=None):
-        data = json.loads(request.body)
+        data = json.loads(request.POST.get('order', '{}'))
         checklists = data.get("checklists", [])
         server_checklist_pks = set()
         for checklist in request.user.checklist_set.all():
@@ -56,11 +58,11 @@ class CreateChecklistView(APIView):
     Request body should be in the format:
     {"pk":1,"title":"test checklist","order":0,"parent":null,"items":[{"text":"test1","checkable":false,"checked":false}]}
     """
-    authentication_classes = (TokenAuthentication,)
+    authentication_classes = (TokenAuthentication,SessionAuthentication)
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, format=None):
-        data = json.loads(request.body)
+        data = json.loads(request.POST.get('checklist', '{}'))
         title = data.get("title", "")
         owner = request.user
         if data.get("parent", None):
@@ -159,3 +161,51 @@ def checklist_to_json(checklist):
     checklistJson['items'] = checklistItems
     checklist.save()
     return checklistJson
+
+def login_user(request):
+    """
+    Method called by the login page to log a user in.
+    """
+    state = "Please log in below..."
+    username = password = ''
+    if request.POST:
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(username=username, password=password)
+        if user is not None:
+            if user.is_active:
+                login(request, user)
+                state = "You're successfully logged in!"
+                return redirect('procedure:main')
+            else:
+                state = "Your account is not active, please contact the site admin."
+        else:
+            state = "Your username and/or password were incorrect."
+    return render(request, 'procedure/login.html', {'state':state, 'username': username})
+
+@login_required(login_url='/procedure/login/')
+def main(request):
+    checklists = request.user.checklist_set.all().order_by('order')
+    return render(request, 'procedure/main.html', {
+        'checklist_list': checklists
+    })
+
+def user_logout(request):
+    if request.user is not None:
+        logout(request)
+    return redirect('procedure:login')
+
+@login_required(login_url='/procedure/login/')
+def checklist(request, checklist_id):
+    checklist = get_object_or_404(Checklist, pk=checklist_id)
+    if (request.user != checklist.owner):
+        return HttpResponseForbidden()
+    checklist_items = checklist.checklistitem_set.all().order_by('order')
+    checklist_dict = checklist_to_json(checklist)
+    checklist_dict['unSynced'] = False
+    return render(request, 'procedure/checklist.html', {
+        'checklist': checklist,
+        'checklist_items': checklist_items,
+        'checklist_json': json.dumps(checklist_dict)
+    })

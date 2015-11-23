@@ -1,0 +1,12 @@
+{% extends "procedure/base.html" %}
+{% block content %}
+    <div class="content">Main page for {{ user.username }}</div>
+    <ul>
+    {% for checklist in checklist_list %}
+      <li>
+        <a href="{% url 'procedure:checklist' checklist.pk %}">{{checklist.title}} {% if checklist.parent != None %}</a>
+        <i>Parent: {{checklist.parent.title}}</i>{% endif %}
+      </li>
+    {% endfor %}
+    </ul>
+{% endblock %}

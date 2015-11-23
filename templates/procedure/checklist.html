@@ -1,0 +1,49 @@
+{% extends "procedure/base.html" %}
+{% block js %}
+  checklist = JSON.parse('{{checklist_json|safe}}')
+
+  function save(){
+    console.log(checklist)
+  }
+
+  $(function(){
+    $('li').on('click', function(){
+      var index = $(this).attr('id').split('-')[1];
+      checklist.items[index].checked = !checklist.items[index].checked;
+      $(this).attr('class', checklist.items[index].checked ? 'checked' : '');
+    });
+
+    $('#save').on('click', function(){
+      $.ajax({url: '{% url 'procedure:create-checklist' %}',
+        data: {checklist: JSON.stringify(checklist)},
+        success: function(data){
+          console.log(data);
+        },
+        error: function(data){
+          console.log(data);
+        },
+        headers: {"X-CSRFToken": $('input[name=csrfmiddlewaretoken]').val()},
+        type: 'POST'
+      });
+    });
+  });
+{% endblock %}
+{% block content %}
+<h1>{{checklist.title}}</h1>
+<ul>
+{% for checklist_item in checklist_items %}
+  {% if not checklist_item.checkable %}
+    </ul>
+  {% else %}
+    <li class="{% if checklist_item.checked %}checked{% endif %}" id="ci-{{forloop.counter0}}">
+  {% endif %}
+  {{checklist_item.text}}
+  {% if not checklist_item.checkable %}
+    <ul>
+  {% else %}
+    </li>
+  {% endif %}
+{% endfor %}
+</ul><br>
+<button type="button" name="button" id="save">Save</button>
+{% endblock %}
